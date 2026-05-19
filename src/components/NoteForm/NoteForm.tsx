@@ -1,11 +1,14 @@
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import type { NoteTag } from "../../types/note";
+import { createNote } from "../../services/noteService";
+
 import css from "./NoteForm.module.css";
 
 interface NoteFormProps {
   onClose: () => void;
-  onSubmit: (values: FormValues) => void;
 }
 
 export interface FormValues {
@@ -33,30 +36,38 @@ const validationSchema = Yup.object({
     .required("Tag is required"),
 });
 
-function NoteForm({ onClose, onSubmit }: NoteFormProps) {
-  const handleSubmit = (values: FormValues) => {
-    onSubmit(values);
-  };
+function NoteForm({ onClose }: NoteFormProps) {
+  const queryClient = useQueryClient();
+
+  const createMutation = useMutation({
+    mutationFn: createNote,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["notes"],
+      });
+
+      onClose();
+    },
+  });
 
   return (
     <Formik
       initialValues={initialValues}
       validationSchema={validationSchema}
-      onSubmit={handleSubmit}
+      onSubmit={(values) => {
+        createMutation.mutate(values);
+      }}
     >
       {({ isSubmitting }) => (
         <Form className={css.form}>
           <div className={css.formGroup}>
             <label htmlFor="title">Title</label>
-
             <Field id="title" name="title" type="text" className={css.input} />
-
             <ErrorMessage name="title" component="span" className={css.error} />
           </div>
 
           <div className={css.formGroup}>
             <label htmlFor="content">Content</label>
-
             <Field
               as="textarea"
               id="content"
@@ -64,7 +75,6 @@ function NoteForm({ onClose, onSubmit }: NoteFormProps) {
               rows={8}
               className={css.textarea}
             />
-
             <ErrorMessage
               name="content"
               component="span"
@@ -74,7 +84,6 @@ function NoteForm({ onClose, onSubmit }: NoteFormProps) {
 
           <div className={css.formGroup}>
             <label htmlFor="tag">Tag</label>
-
             <Field as="select" id="tag" name="tag" className={css.select}>
               <option value="Todo">Todo</option>
               <option value="Work">Work</option>
@@ -82,7 +91,6 @@ function NoteForm({ onClose, onSubmit }: NoteFormProps) {
               <option value="Meeting">Meeting</option>
               <option value="Shopping">Shopping</option>
             </Field>
-
             <ErrorMessage name="tag" component="span" className={css.error} />
           </div>
 
@@ -98,9 +106,9 @@ function NoteForm({ onClose, onSubmit }: NoteFormProps) {
             <button
               type="submit"
               className={css.submitButton}
-              disabled={isSubmitting}
+              disabled={isSubmitting || createMutation.isPending}
             >
-              Create note
+              {createMutation.isPending ? "Creating..." : "Create note"}
             </button>
           </div>
         </Form>

@@ -1,18 +1,11 @@
 import { useState } from "react";
 import css from "./App.module.css";
 
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { useDebouncedCallback } from "use-debounce";
 
-import { fetchNotes, deleteNote, createNote } from "../../services/noteService";
-
-import type { CreateNoteData } from "../../services/noteService";
+import { fetchNotes } from "../../services/noteService";
 
 import NoteList from "../NoteList/NoteList";
 import Pagination from "../Pagination/Pagination";
@@ -21,13 +14,10 @@ import Modal from "../Modal/Modal";
 import NoteForm from "../NoteForm/NoteForm";
 
 function App() {
-  const queryClient = useQueryClient();
-
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["notes", page, query],
@@ -43,6 +33,7 @@ function App() {
   const notes = data?.notes ?? [];
   const totalPages = data?.totalPages ?? 0;
 
+  // SEARCH
   const handleSearch = useDebouncedCallback((value: string) => {
     setQuery(value);
     setPage(1);
@@ -53,41 +44,7 @@ function App() {
     handleSearch(value);
   };
 
-  // DELETE MUTATION
-  const deleteMutation = useMutation({
-    mutationFn: deleteNote,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["notes"],
-      });
-    },
-  });
-
-  const handleDelete = (id: string) => {
-    setDeletingId(id);
-
-    deleteMutation.mutate(id, {
-      onSettled: () => {
-        setDeletingId(null);
-      },
-    });
-  };
-
-  //  CREATE MUTATION
-  const createMutation = useMutation({
-    mutationFn: createNote,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["notes"],
-      });
-      closeModal();
-    },
-  });
-
-  const handleCreateNote = (values: CreateNoteData) => {
-    createMutation.mutate(values);
-  };
-
+  // MODAL
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
@@ -113,19 +70,13 @@ function App() {
       </header>
 
       {/* NOTES */}
-      {notes.length > 0 && (
-        <NoteList
-          notes={notes}
-          onDelete={handleDelete}
-          deletingId={deletingId}
-        />
-      )}
+      {notes.length > 0 && <NoteList notes={notes} />}
 
       {notes.length === 0 && <p>No notes found</p>}
 
       {/* MODAL */}
       <Modal isOpen={isModalOpen} onClose={closeModal}>
-        <NoteForm onClose={closeModal} onSubmit={handleCreateNote} />
+        <NoteForm onClose={closeModal} />
       </Modal>
     </div>
   );
