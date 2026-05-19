@@ -53,7 +53,7 @@ function App() {
     handleSearch(value);
   };
 
-  // 🧨 DELETE MUTATION (з loading state)
+  // DELETE MUTATION
   const deleteMutation = useMutation({
     mutationFn: deleteNote,
     onSuccess: () => {
@@ -73,7 +73,7 @@ function App() {
     });
   };
 
-  // ✨ CREATE MUTATION
+  //  CREATE MUTATION
   const createMutation = useMutation({
     mutationFn: createNote,
     onSuccess: () => {
